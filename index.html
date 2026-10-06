@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Chop Counter</title>
+<style>
+:root{--bg:#faf6ef;--card:#fff;--tx:#1f2a1f;--mut:#6b7468;--acc:#1b7a43;--on:#fff;--gold:#e8a317;--ln:#e8e2d4;--red:#c8442f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121712;--card:#1c241c;--tx:#eef2ea;--mut:#9aa596;--acc:#4cc27c;--on:#0d150d;--ln:#2b362b}}
+:root[data-theme="dark"]{--bg:#121712;--card:#1c241c;--tx:#eef2ea;--mut:#9aa596;--acc:#4cc27c;--on:#0d150d;--ln:#2b362b}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
+#app{max-width:480px;margin:0 auto;padding:14px 14px 110px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:18px;padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}.sp{justify-content:space-between}
+h1{font-size:20px;margin:0}h3{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.nav{font-size:22px;padding:4px 12px;color:var(--acc)}
+.btn{background:var(--acc);color:var(--on);border-radius:12px;padding:12px 16px;font-weight:600;width:100%}
+.btn.alt{background:var(--card);color:var(--tx);border:1px solid var(--ln)}
+.mut{color:var(--mut);font-size:13px}
+.bar{height:8px;background:var(--ln);border-radius:5px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--acc)}
+.macro{flex:1}.macro b{font-size:15px}
+.item{padding:9px 0;border-top:1px solid var(--ln)}.item:first-of-type{border-top:0}
+.x{color:var(--mut);padding:4px 8px;font-size:18px}
+#fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));width:auto;padding:14px 28px;border-radius:30px;box-shadow:0 6px 20px #0004;z-index:5}
+#sheet{position:fixed;inset:0;background:#0007;display:none;z-index:10}
+#sheet.on{display:block}
+#pane{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow:auto;background:var(--bg);border-radius:22px 22px 0 0;padding:14px 14px calc(20px + env(safe-area-inset-bottom,0px));max-width:480px;margin:0 auto}
+.tabs{display:flex;gap:6px;margin-bottom:10px}.tabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--ln);background:var(--card);font-size:14px}.tabs .on{background:var(--acc);color:var(--on);border-color:var(--acc)}
+input,select{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:10px;width:100%}
+.fi{padding:10px 4px;border-bottom:1px solid var(--ln);display:flex;justify-content:space-between;gap:8px}
+.q{display:flex;align-items:center;gap:14px;justify-content:center;margin:10px 0}.q button{width:44px;height:44px;border-radius:50%;border:1px solid var(--ln);background:var(--card);font-size:22px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.k{width:78px;text-align:right;padding:6px}
+</style></head><body>
+<div id="app"></div>
+<button id="fab" class="btn" onclick="openSheet()">+ Add food</button>
+<div id="sheet" onclick="if(event.target===this)closeSheet()"><div id="pane"></div></div>
+<script>
+const FOODS=`Jollof rice|1 plate (350g)|520|10|85|16
+Waakye with stew & egg|1 plate (400g)|560|20|84|16
+Plain rice|1 cup cooked|205|4|45|0.4
+Fried rice|1 plate (350g)|560|12|80|20
+Banku|1 ball (300g)|330|6|74|1.5
+Banku, tilapia & pepper|1 plate|750|45|78|22
+Kenkey (Ga/Fante)|1 ball (250g)|320|7|70|2
+Fufu|1 bowl (300g)|420|3|100|0.5
+Omo tuo (rice balls)|2 balls|300|6|66|1
+Tuo zaafi (TZ)|1 portion (300g)|340|7|75|1
+Kokonte|1 bowl|380|3|90|0.5
+Akple|1 ball (300g)|350|6|78|1.5
+Red red (beans & fried plantain)|1 plate|600|17|80|24
+Gob3 (gari & beans)|1 plate|560|18|90|14
+Gari soakings|1 bowl w/ milk, sugar|400|8|70|10
+Tatale|1 portion|300|4|45|11
+Fried plantain (dodo)|1 portion (120g)|250|1.5|42|9
+Kelewele|1 portion (120g)|290|2|44|13
+Boiled plantain|1 medium|180|1.5|47|0.3
+Fried yam|1 portion (150g)|330|3|52|13
+Boiled yam|1 portion (200g)|235|3|56|0.3
+Yam & kontomire stew|1 plate|480|14|70|17
+Kontomire (palava) stew|1 serving (200g)|260|12|6|21
+Groundnut soup|1 bowl w/ meat|520|26|14|40
+Palm nut soup|1 bowl w/ meat|450|22|10|36
+Light soup (goat)|1 bowl|220|20|8|12
+Okro soup/stew|1 bowl|180|15|9|9
+Egusi stew|1 serving|380|18|8|31
+Shito|1 tbsp|60|1|2|5
+Fried tilapia|1 medium fish|250|35|0|11
+Grilled tilapia|1 medium fish|220|40|0|6
+Fried chicken|1 leg/thigh|290|24|8|18
+Grilled chicken|1 piece (150g)|240|30|0|13
+Khebab (beef)|1 stick|150|14|3|9
+Beef/goat stew|1 serving|250|20|6|16
+Boiled egg|1 egg|78|6|0.6|5
+Egg sandwich (tea bread)|1 sandwich|380|14|42|17
+Tea bread|2 slices|160|5|30|2
+Bofrot|1 piece|140|2|18|7
+Chin chin|1 handful (40g)|200|3|26|9
+Koose|1 piece|90|4|6|6
+Hausa koko|1 cup (250ml)|160|3|34|1
+Tom Brown porridge|1 bowl|250|7|45|4
+Kaklo|1 piece|110|1|20|3
+Meat pie|1 pie|400|10|38|23
+Ghana salad|1 plate|350|10|20|26
+Indomie noodles|1 pack + egg|450|14|55|20
+Sobolo (zobo)|1 cup (250ml)|90|0|22|0
+Soft drink|330ml|140|0|35|0
+Banana|1 medium|105|1.3|27|0.4
+Pawpaw|1 cup|60|0.9|15|0.2
+Pineapple|1 cup|82|0.9|22|0.2
+Orange|1 medium|62|1.2|15|0.2
+Groundnuts (roasted)|1 handful (30g)|170|7|5|14`.split('\n').map(l=>{const a=l.split('|');return{n:a[0],s:a[1],k:+a[2],p:+a[3],c:+a[4],f:+a[5]}});
+const MEALS=['Breakfast','Lunch','Dinner','Snack'];
+let S;try{S=JSON.parse(localStorage.getItem('chop1'))}catch(e){}
+S=S||{goal:2000,days:{}};
+const save=()=>{try{localStorage.setItem('chop1',JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const key=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+let date=key(new Date());
+const todayKey=()=>key(new Date());
+const defMeal=()=>{const h=new Date().getHours();return h<11?0:h<16?1:h<21?2:3};
+const r1=n=>Math.round(n*10)/10;
+function shift(n){const [y,m,d]=date.split('-').map(Number);const dt=new Date(y,m-1,d+n);if(key(dt)>todayKey())return;date=key(dt);render()}
+function label(){if(date===todayKey())return'Today';const [y,m,d]=date.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})}
+function render(){
+  const L=S.days[date]||[];
+  const t=L.reduce((a,i)=>({k:a.k+i.k,p:a.p+i.p,c:a.c+i.c,f:a.f+i.f}),{k:0,p:0,c:0,f:0});
+  const left=S.goal-t.k,pct=Math.min(1,t.k/S.goal),C=2*Math.PI*54;
+  const mac=(n,v,g)=>`<div class="macro"><div class="mut">${n}</div><b>${Math.round(v)}g</b><div class="bar"><i style="width:${Math.min(100,v/g*100)}%"></i></div></div>`;
+  let h=`<div class="row sp" style="margin-bottom:10px"><button class="nav" onclick="shift(-1)">‹</button><h1>🍲 ${label()}</h1><button class="nav" onclick="shift(1)" style="${date===todayKey()?'opacity:.25':''}">›</button></div>
+  <div class="card"><div class="row sp"><svg width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="54" fill="none" stroke="var(--ln)" stroke-width="12"/><circle cx="65" cy="65" r="54" fill="none" stroke="${left<0?'var(--red)':'var(--acc)'}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C*pct} ${C}" transform="rotate(-90 65 65)"/><text x="65" y="64" text-anchor="middle" font-size="26" font-weight="700" fill="var(--tx)">${Math.abs(Math.round(left))}</text><text x="65" y="84" text-anchor="middle" font-size="12" fill="var(--mut)">${left<0?'kcal over':'kcal left'}</text></svg>
+  <div style="flex:1"><div class="mut">Eaten</div><b style="font-size:22px">${Math.round(t.k)}</b> <span class="mut">/ ${S.goal}</span><br><button class="mut" style="text-decoration:underline;padding:6px 0" onclick="setGoal()">Change goal</button></div></div>
+  <div class="row" style="margin-top:12px;gap:14px">${mac('Protein',t.p,Math.round(S.goal*.25/4))}${mac('Carbs',t.c,Math.round(S.goal*.5/4))}${mac('Fat',t.f,Math.round(S.goal*.25/9))}</div></div>`;
+  MEALS.forEach((m,mi)=>{
+    const it=L.filter(i=>i.m===mi);if(!it.length)return;
+    h+=`<div class="card"><div class="row sp"><h3>${m}</h3><span class="mut">${Math.round(it.reduce((a,i)=>a+i.k,0))} kcal</span></div>`+
+    it.map(i=>`<div class="item row sp"><div><div>${esc(i.n)}</div><div class="mut">${esc(i.s||'')} · P${Math.round(i.p)} C${Math.round(i.c)} F${Math.round(i.f)}</div></div><div class="row"><b>${Math.round(i.k)}</b><button class="x" onclick="del('${i.id}')">✕</button></div></div>`).join('')+`</div>`;
+  });
+  if(!L.length)h+=`<div class="card mut" style="text-align:center">Nothing logged yet. Tap “Add food” to snap a photo of your plate or search Ghanaian dishes.</div>`;
+  document.getElementById('app').innerHTML=h;
+}
+function del(id){S.days[date]=(S.days[date]||[]).filter(i=>i.id!==id);save();render()}
+function setGoal(){const v=parseInt(prompt('Daily calorie goal (kcal)',S.goal));if(v>500&&v<10000){S.goal=v;save();render()}}
+function addItems(arr,m){(S.days[date]=S.days[date]||[]);arr.forEach(i=>S.days[date].push({id:Math.random().toString(36).slice(2),m,n:i.n,s:i.s,k:+i.k||0,p:+i.p||0,c:+i.c||0,f:+i.f||0}));save();closeSheet();render()}
+// ---- sheet
+let tab='search',sel=null,meal=defMeal(),qty=1,found=[],busy=false,err='',q='';
+function openSheet(){tab='search';sel=null;found=[];err='';q='';meal=defMeal();document.getElementById('sheet').classList.add('on');pane()}
+function closeSheet(){stopCam();document.getElementById('sheet').classList.remove('on')}
+const mealSel=()=>`<select onchange="meal=+this.value">${MEALS.map((m,i)=>`<option value="${i}" ${i===meal?'selected':''}>${m}</option>`).join('')}</select>`;
+function pane(){
+  const P=document.getElementById('pane');
+  let h=`<div class="tabs">${[['search','🔎 Search'],['photo','📷 Photo'],['custom','✏️ Custom']].map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="stopCam();tab='${k}';sel=null;pane()">${l}</button>`).join('')}</div>`;
+  if(tab==='search'){
+    if(sel){const f=sel;h+=`<div class="card"><b>${esc(f.n)}</b><div class="mut">${esc(f.s)} (1×)</div><div class="q"><button onclick="qty=Math.max(.5,qty-.5);pane()">−</button><div style="text-align:center"><b style="font-size:24px">${qty}×</b><div class="mut">${Math.round(f.k*qty)} kcal</div></div><button onclick="qty+=.5;pane()">+</button></div><div class="mut" style="text-align:center;margin-bottom:10px">P ${r1(f.p*qty)}g · C ${r1(f.c*qty)}g · F ${r1(f.f*qty)}g</div>${mealSel()}<div style="height:10px"></div><button class="btn" onclick="addItems([{n:sel.n,s:qty+'× '+sel.s,k:sel.k*qty,p:sel.p*qty,c:sel.c*qty,f:sel.f*qty}],meal)">Add to log</button><button class="btn alt" style="margin-top:8px" onclick="sel=null;pane()">Back</button></div>`}
+    else{const l=FOODS.filter(f=>f.n.toLowerCase().includes(q.toLowerCase()));h+=`<input id="qi" placeholder="Search banku, waakye, kenkey…" value="${esc(q)}" oninput="q=this.value;list()"><div id="fl">${fl(l)}</div>`}
+  }
+  if(tab==='photo'){
+    if(cam){h+=`<div class="card"><video id="vid" autoplay playsinline muted style="width:100%;border-radius:12px;background:#000"></video><div class="row" style="margin-top:10px"><button class="btn alt" onclick="stopCam();pane()">Cancel</button><button class="btn" onclick="snap()">📸 Capture</button></div></div>`}
+    else{h+=`<div class="card"><button class="btn" onclick="startCam()" ${busy?'disabled':''}>📷 Open camera</button><div class="mut" style="margin:12px 0 6px">or pick a photo from your library</div><input id="pf" type="file" accept="image/*" onchange="photo(this.files[0])" ${busy?'disabled':''}>${busy?'<p class="mut">Analysing your plate…</p>':''}${err?`<p style="color:var(--red)">${esc(err)}</p>`:''}</div>`}
+    if(found.length){h+=`<div class="card"><h3>Estimated items — adjust if needed</h3>`+found.map((i,x)=>`<div class="item row sp"><div style="flex:1"><div>${esc(i.n)}</div><div class="mut">${esc(i.s||'')}</div></div><input class="k" type="number" inputmode="numeric" value="${Math.round(i.k)}" onchange="found[${x}].k=+this.value"></div>`).join('')+`<div style="height:10px"></div>${mealSel()}<div style="height:10px"></div><button class="btn" onclick="addItems(found,meal)">Add all to log</button><p class="mut">Photo estimates are approximate — portion size matters most.</p></div>`}
+  }
+  if(tab==='custom'){
+    h+=`<div class="card"><div class="g"><input id="cn" placeholder="Food name" style="grid-column:1/3"><input id="ck" type="number" inputmode="decimal" placeholder="kcal"><input id="cp" type="number" inputmode="decimal" placeholder="Protein g"><input id="cc" type="number" inputmode="decimal" placeholder="Carbs g"><input id="cf" type="number" inputmode="decimal" placeholder="Fat g"></div><div style="height:10px"></div>${mealSel()}<div style="height:10px"></div><button class="btn" onclick="custom()">Add to log</button></div>`;
+  }
+  P.innerHTML=h;
+  if(cam&&stream){const v=document.getElementById('vid');if(v)v.srcObject=stream}
+}
+const fl=l=>l.map(f=>`<div class="fi" onclick="pick(${FOODS.indexOf(f)})"><div><div>${esc(f.n)}</div><div class="mut">${esc(f.s)}</div></div><b>${f.k}</b></div>`).join('')||'<p class="mut">No match — try Custom.</p>';
+function list(){document.getElementById('fl').innerHTML=fl(FOODS.filter(f=>f.n.toLowerCase().includes(q.toLowerCase())))}
+function pick(i){sel=FOODS[i];qty=1;pane()}
+function custom(){const g=id=>document.getElementById(id).value;const n=g('cn').trim(),k=+g('ck');if(!n||!(k>=0))return;addItems([{n,s:'custom',k,p:+g('cp'),c:+g('cc'),f:+g('cf')}],meal)}
+async function shrink(file){const bm=await createImageBitmap(file);const s=Math.min(1,1024/Math.max(bm.width,bm.height));const c=document.createElement('canvas');c.width=Math.round(bm.width*s);c.height=Math.round(bm.height*s);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',.8))}
+let cam=false,stream=null;
+async function startCam(){err='';try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false});cam=true}catch(e){err='Camera unavailable. Allow camera access for this site in Safari settings, or pick a photo instead.'}pane()}
+function stopCam(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;cam=false}
+async function snap(){const v=document.getElementById('vid');if(!v||!v.videoWidth)return;const c=document.createElement('canvas');const s=Math.min(1,1024/Math.max(v.videoWidth,v.videoHeight));c.width=Math.round(v.videoWidth*s);c.height=Math.round(v.videoHeight*s);c.getContext('2d').drawImage(v,0,0,c.width,c.height);const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.8));stopCam();photo(b)}
+function pass(){let p='';try{p=localStorage.getItem('chop_pass')||''}catch(e){}if(!p){p=prompt('Enter your app passcode')||'';try{localStorage.setItem('chop_pass',p)}catch(e){}}return p}
+async function photo(file){
+  if(!file)return;err='';found=[];busy=true;pane();
+  try{
+    const blob=await shrink(file);
+    const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
+    const ref=FOODS.map(f=>`${f.n} (${f.s}): ${f.k} kcal`).join('\n');
+    const res=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json','x-passcode':pass()},body:JSON.stringify({image:b64,ref})});
+    if(res.status===401){try{localStorage.removeItem('chop_pass')}catch(e){}throw{message:'Wrong passcode. Try again.'}}
+    const out=await res.json();if(!res.ok)throw{message:out.error||'Analysis failed'};
+    found=(out.items||[]).map(i=>({n:i.name,s:i.portion,k:i.kcal,p:i.p,c:i.c,f:i.f}));
+    if(!found.length)err='No food detected. Try a clearer photo.';
+  }catch(e){err=(e&&e.message)||'Something went wrong.'}
+  busy=false;if(document.getElementById('sheet').classList.contains('on'))pane();
+}
+render();
+</script></body></html>
